@@ -57,16 +57,35 @@ typedef struct Sema4 Sema4Type;
 // initialize OS controlled I/O: serial, ADC, systick, LaunchPad I/O and timers 
 // input:  none
 // output: none
-void OS_Init(void);
+void OS_Init(void); 
 
-//******** OS_Launch *************** 
-// start the scheduler, enable interrupts
-// Inputs: number of 12.5ns clock cycles for each time slice
-//         you may select the units of this parameter
-// Outputs: none (does not return)
-// It is ok to limit the range of theTimeSlice to match the 24-bit SysTick
-void OS_Launch(unsigned long theTimeSlice);
+// ******** OS_InitSemaphore ************
+// initialize semaphore 
+// input:  pointer to a semaphore
+// output: none
+void OS_InitSemaphore(Sema4Type *semaPt, long value); 
 
+// ******** OS_Wait ************
+// decrement semaphore 
+// input:  pointer to a counting semaphore
+// output: none
+void OS_Wait(Sema4Type *semaPt); 
+
+// ******** OS_Signal ************
+// increment semaphore  
+// input:  pointer to a counting semaphore
+// output: none
+void OS_Signal(Sema4Type *semaPt); 
+
+// ******** OS_bWait ************
+// input:  pointer to a binary semaphore
+// output: none
+void OS_bWait(Sema4Type *semaPt); 
+
+// ******** OS_bSignal ************ 
+// input:  pointer to a binary semaphore
+// output: none
+void OS_bSignal(Sema4Type *semaPt); 
 
 //******** OS_AddThread *************** 
 // add a foregound thread to the scheduler
@@ -99,33 +118,28 @@ unsigned long OS_Id(void);
 int OS_AddPeriodicThread(void(*task)(void), 
    unsigned long period, unsigned long priority);
 
-// ******** OS_InitSemaphore ************
-// initialize semaphore 
-// input:  pointer to a semaphore
-// output: none
-void OS_InitSemaphore(Sema4Type *semaPt, long value); 
+//******** OS_AddSW1Task *************** 
+// add a background task to run whenever the BUTTON1 (PD6) button is pushed
+// Inputs: pointer to a void/void background function
+//         priority 0 is the highest, 5 is the lowest
+// Outputs: 1 if successful, 0 if this thread can not be added
+// It is assumed that the user task will run to completion and return
+// This task can not spin, block, loop, sleep, or kill
+// This task can call OS_Signal  OS_bSignal	 OS_AddThread
+// This task does not have a Thread ID
+int OS_AddSW1Task(void(*task)(void), unsigned long priority);
 
-// ******** OS_Wait ************
-// decrement semaphore 
-// input:  pointer to a counting semaphore
-// output: none
-void OS_Wait(Sema4Type *semaPt); 
+//******** OS_AddSW2Task *************** 
+// add a background task to run whenever the BUTTON2 (PD7) button is pushed
+// Inputs: pointer to a void/void background function
+//         priority 0 is highest, 5 is lowest
+// Outputs: 1 if successful, 0 if this thread can not be added
+// It is assumed user task will run to completion and return
+// This task can not spin block loop sleep or kill
+// This task can call issue OS_Signal, it can call OS_AddThread
+// This task does not have a Thread ID
+int OS_AddSW2Task(void(*task)(void), unsigned long priority);
 
-// ******** OS_Signal ************
-// increment semaphore  
-// input:  pointer to a counting semaphore
-// output: none
-void OS_Signal(Sema4Type *semaPt); 
-
-// ******** OS_bWait ************
-// input:  pointer to a binary semaphore
-// output: none
-void OS_bWait(Sema4Type *semaPt); 
-
-// ******** OS_bSignal ************ 
-// input:  pointer to a binary semaphore
-// output: none
-void OS_bSignal(Sema4Type *semaPt); 
 
 // ******** OS_Sleep ************
 // place this thread into a dormant state
@@ -183,27 +197,13 @@ void OS_ClearMsTime(void);
 // It is ok to make the resolution to match the first call to OS_AddPeriodicThread
 unsigned long OS_MsTime(void);
 
-//******** OS_AddSW1Task *************** 
-// add a background task to run whenever the BUTTON1 (PD6) button is pushed
-// Inputs: pointer to a void/void background function
-//         priority 0 is the highest, 5 is the lowest
-// Outputs: 1 if successful, 0 if this thread can not be added
-// It is assumed that the user task will run to completion and return
-// This task can not spin, block, loop, sleep, or kill
-// This task can call OS_Signal  OS_bSignal	 OS_AddThread
-// This task does not have a Thread ID
-int OS_AddSW1Task(void(*task)(void), unsigned long priority);
-
-//******** OS_AddSW2Task *************** 
-// add a background task to run whenever the BUTTON2 (PD7) button is pushed
-// Inputs: pointer to a void/void background function
-//         priority 0 is highest, 5 is lowest
-// Outputs: 1 if successful, 0 if this thread can not be added
-// It is assumed user task will run to completion and return
-// This task can not spin block loop sleep or kill
-// This task can call issue OS_Signal, it can call OS_AddThread
-// This task does not have a Thread ID
-int OS_AddSW2Task(void(*task)(void), unsigned long priority);
+//******** OS_Launch *************** 
+// start the scheduler, enable interrupts
+// Inputs: number of 12.5ns clock cycles for each time slice
+//         you may select the units of this parameter
+// Outputs: none (does not return)
+// It is ok to limit the range of theTimeSlice to match the 24-bit SysTick
+void OS_Launch(unsigned long theTimeSlice);
 
 void Scheduler(void);
 void InitTimer1A(unsigned long period, uint32_t priority);

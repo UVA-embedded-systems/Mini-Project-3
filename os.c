@@ -122,7 +122,8 @@ void OS_Launch(unsigned long theTimeSlice){
 // input:  none
 // output: none
 void OS_Suspend(void) { 
-	// Your code here
+	NVIC_ST_CURRENT_R  = 0; // reset counter
+	NVIC_INT_CTRL_R = 0x04000000;		// trigger SysTick
 }
 
 //******** OS_AddThread *************** 
@@ -134,8 +135,41 @@ void OS_Suspend(void) {
 // stack size must be divisable by 8 (aligned to double word boundary)
 static uint32_t ThreadNum = 0;
 int OS_AddThread(void(*task)(void), unsigned long stackSize, unsigned long priority) {
-	// Your code here
-	return 1;      
+	unsigned char i,j;	 
+	int32_t status,thread;
+  status = StartCritical();
+  if (ThreadNum == NUMTHREADS){ // no available tcbs
+	  EndCritical(status);
+	  return 0;
+  }
+  else{
+	  	if (ThreadNum == 0) {  // start add thread
+			tcbs[0].available = 0;
+			tcbs[0].next = &tcbs[0];  // first, create a single cycle
+			RunPt = &tcbs[0]; //start from tcbs[0]
+			thread = 0;
+		}
+		else{   // not the start
+			for (i=0;i<NUMTHREADS;i++) {
+				if (tcbs[i].available) break;   // find an available tcb for the new thread
+			}
+			thread = i;
+			tcbs[i].available = 0; // make this tcb no longer available
+			for (j = (thread + NUMTHREADS - 1)%NUMTHREADS; j != thread; j = (j + NUMTHREADS - 1)%NUMTHREADS){
+				if (tcbs[j].available == 0) break; // find a previous tcb which has been used
+			}
+			// add this tcb into the link list cycle
+			tcbs[thread].next = tcbs[j].next;  
+			tcbs[j].next = &tcbs[thread];
+		}
+		tcbs[thread].id = thread;
+	
+		SetInitialStack(thread); 
+		Stacks[thread][STACKSIZE-2] = (int32_t)(task); // PC		
+		ThreadNum++;
+		EndCritical(status);
+		return 1; 
+	}            
 }
 	 
 //******** OS_Id *************** 
@@ -198,8 +232,22 @@ void OS_Sleep(unsigned long sleepTime){
 // input:  none
 // output: none
 void OS_Kill(void){
-	// Your code here
+	unsigned char i;
+	int32_t thread;
+	RunPt->available = 1;
+	thread = OS_Id();
+	for (i = (thread + NUMTHREADS - 1) % NUMTHREADS; i != thread; i = (i + NUMTHREADS - 1) % NUMTHREADS){
+		if (tcbs[i].available == 0) 
+			break;   // find the previous used tcb
+	}
+	ThreadNum--;
+  tcbs[i].next = tcbs[thread].next;	
+	OS_Suspend(); // switch the thread
 }	
+
+void Scheduler(void){
+	RunPt = RunPt->next;
+}
 
 //******** OS_AddPeriodicThread *************** 
 // add a background periodic task
@@ -238,9 +286,8 @@ int OS_AddPeriodicThread(void(*task)(void),
 // The time resolution should be less than or equal to 1us, and the precision 32 bits
 // It is ok to change the resolution and precision of this function as long as 
 //   this function and OS_TimeDifference have the same resolution and precision 
-unsigned long OS_Time(void) {
-	// Your code here
-	return 1;
+unsigned long OS_Time(void) { 
+	return TIMER3_TAILR_R - TIMER3_TAV_R;
 }
 
 // ******** OS_TimeDifference ************
@@ -251,8 +298,7 @@ unsigned long OS_Time(void) {
 // It is ok to change the resolution and precision of this function as long as 
 //   this function and OS_Time have the same resolution and precision 
 unsigned long OS_TimeDifference(unsigned long start, unsigned long stop) {
-	// Your code here
-	return 1;
+	return stop-start;
 }
 
 // Ms time system
@@ -263,7 +309,7 @@ static uint32_t MSTime;
 // Outputs: none
 // You are free to change how this works
 void OS_ClearMsTime(void) {
-	// Your code here
+	MSTime = 0;
 }
 
 // ******** OS_MsTime ************
@@ -272,13 +318,8 @@ void OS_ClearMsTime(void) {
 // Outputs: time in ms units
 // You are free to select the time resolution for this function
 // It is ok to make the resolution to match the first call to OS_AddPeriodicThread
-unsigned long OS_MsTime(void) {
-	// Your code here
-	return 1;
-}
-
-void Scheduler(void){
-	RunPt = RunPt->next;
+unsigned long OS_MsTime(void) {	
+	return MSTime;
 }
 
 // Timers ------------------------------------------------------------------------------

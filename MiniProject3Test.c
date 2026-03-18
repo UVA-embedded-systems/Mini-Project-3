@@ -136,7 +136,7 @@ void Thread5c(void){
   }
 }
 void Thread2c(void){
-  OS_InitSemaphore(&Readyc,0);
+  OS_InitSemaphore(&Readyc, 0);
   Count1 = 0;    // number of times signal is called      
   Count2 = 0;    
   Count5 = 0;    // Count2 + Count5 should equal Count1  
@@ -170,7 +170,7 @@ int Testmain3(void){   // Testmain3
   Count4 = 0;          
   OS_Init();           // initialize, disable interrupts
   NumCreated = 0 ;
-  OS_AddSW1Task(&BackgroundThread5c,2);
+  OS_AddSW1Task(&BackgroundThread5c, 2);
   NumCreated += OS_AddThread(&Thread2c, 128, 2); 
   NumCreated += OS_AddThread(&Thread3c, 128, 3); 
   NumCreated += OS_AddThread(&Thread4c, 128, 3); 
@@ -185,6 +185,7 @@ int Testmain3(void){   // Testmain3
 // Count3 should be very large
 // Count4 increases by 640 every time select is pressed
 // NumCreated increase by 1 every time select is pressed
+
 Sema4Type Readyd;        // set in background
 void BackgroundThread1d(void){   // called at 1000 Hz
 static int i=0;
